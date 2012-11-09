@@ -9,8 +9,10 @@
   },
   "dependencies": {
     "serialport": "1.0.6",
-    "socket.io": "*"
-  }
+    "socket.io": "*",
+    "express": "*",
+    "moment": "*"
+  },
   "engines": {
     "node": ">=0.6 <0.8"
   }

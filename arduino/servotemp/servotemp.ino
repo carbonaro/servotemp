@@ -3,9 +3,9 @@
 
 #define T_AMB 0x06
 #define T_OBJ 0x07
-#define WAIT_TIME 5 // number of minutes between each measure
-#define N_SAMPLES 5 // number of samples to average between to measures
-#define DEBUG false
+#define WAIT_TIME 1 // number of minutes between each measure
+#define N_SAMPLES 12 // number of samples to average between to measures
+#define DEBUG true
 #define N_STOPS 3
 int stop_positions[N_STOPS] = {0, 85, 169}; // Angles at which the servo will stop to measure the temperature
 
@@ -38,7 +38,7 @@ void send_results(int angle, float amb, float obj) {
     strncpy(buffer+5, float2s(amb), 7);
     strncpy(buffer+12, ",", 1);
     strncpy(buffer+13, float2s(obj), 7);
-    buffer[20] = '\r';
+    buffer[20] = '!';
     buffer[21] = '\0';
     Serial.println(buffer);
 }
@@ -92,12 +92,13 @@ double readTemperature(char command) {
 
 void setup(){
     Serial.begin(9600);
-    Serial.println("Servo temp starting...");
+    Serial.println("servotemp starting...");
 
     i2c_init(); //Initialise the i2c bus
     PORTC = (1 << PORTC4) | (1 << PORTC5);//enable pullups
 
     myservo.attach(9);
+    Serial.println('Still here');
 }
 
 void loop(){
