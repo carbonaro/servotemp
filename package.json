@@ -1,0 +1,17 @@
+{
+  "author": "Philippe Breuils <philippe.breuils@gmail.com>",
+  "name": "servotemp",
+  "description": "Servo assisted IR temperature sensing",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/carbonaro/servotemp.git"
+  },
+  "dependencies": {
+    "serialport": "1.0.6",
+    "socket.io": "*"
+  }
+  "engines": {
+    "node": ">=0.6 <0.8"
+  }
+}

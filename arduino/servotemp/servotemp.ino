@@ -6,8 +6,8 @@
 #define WAIT_TIME 5 // number of minutes between each measure
 #define N_SAMPLES 5 // number of samples to average between to measures
 #define DEBUG false
-
-int stop_positions[3] = {0, 85, 169}; // Angles at which the servo will stop to measure the temperature
+#define N_STOPS 3
+int stop_positions[N_STOPS] = {0, 85, 169}; // Angles at which the servo will stop to measure the temperature
 
 float temp_amb[N_SAMPLES];
 float temp_obj[N_SAMPLES];
@@ -17,20 +17,30 @@ Servo myservo;  // create servo object to control a servo
 
 int pos = 0;    // variable to store the servo position 
 
+char *float2s(float f, unsigned int digits=2) {
+  static char buf[10];
+  return dtostrf(f, 7, digits, buf);
+}
+
 void send_results(int angle, float amb, float obj) {
     // Protocol
     //
     // Each message is coded on 17 bytes
-    // $ PPP +AAA.AA +OOO.OO <CR>
+    // $ PPP,+AAA.AA,+OOO.OO<CR>
     // Where:
     //  PPP is the servo angle
     //  +AAA.AA is the signed ambient temperature
     //  +OOO.OO is the signed object temperature
     //
     // Ex: $090-010.15+030.42\r
-    char buf[17];
-    sprintf(buf, "$%3d,%+3.2d,%+3.2d\r", angle, amb, obj);
-    Serial.println(buf);
+    char buffer[22];
+    sprintf(buffer, "@%03d,", angle);
+    strncpy(buffer+5, float2s(amb), 7);
+    strncpy(buffer+12, ",", 1);
+    strncpy(buffer+13, float2s(obj), 7);
+    buffer[20] = '\r';
+    buffer[21] = '\0';
+    Serial.println(buffer);
 }
 
 void reset_measures(float *arr) {
@@ -58,7 +68,7 @@ double readTemperature(char command) {
     int pec = 0;
 
     if (DEBUG)
-        return (random(10,30));
+        return (random(-40,120));
 
     i2c_start_wait(dev+I2C_WRITE);
     i2c_write(command);
@@ -92,7 +102,7 @@ void setup(){
 
 void loop(){
     int current_pos = 0;
-    for (int i = 0 ; i < sizeof(stop_positions) ; i++) {
+    for (int i = 0 ; i < N_STOPS ; i++) {
         current_pos = stop_positions[i];
         myservo.write(current_pos);
         delay(1000); // wait for 1 second to give the servo enough time to move to its position
