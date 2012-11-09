@@ -1,7 +1,8 @@
 var sio = require('socket.io')
   , serial = require('serialport')
   , child = require('child_process')
-  , moment = require('moment');
+  , moment = require('moment')
+  , fs = require('fs');
 
 var express = require('express')
   , routes = require('./routes')
@@ -61,11 +62,13 @@ function connectToArduino(callback) {
 
 function parseSerialData(data) {
   // Ex: @085,  17.00,  20.50
-  var line;
+  var line, fd;
   var match = data.match(/^@[0-9]{3},[-| ].{6},[-| ].{6}\!/g);
   if (match) {
-    line = moment().format() + "," + data.replace("@","").replace("!","");
-    console.log(line);
+    line = moment().format() + "," + data.replace("@","").replace("!","") + "\n";
+    fd = fs.openSync(path.join(process.cwd(), 'public','temperatures.csv'), 'a');
+    fs.writeSync(fd, line);
+    fs.closeSync(fd);
   }
 }
 
