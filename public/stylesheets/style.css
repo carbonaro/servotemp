@@ -6,3 +6,8 @@ body {
 a {
   color: #00B7FF;
 }
+
+.gauge {
+  color: #333;
+  font-size: 20px;
+}

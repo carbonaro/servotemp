@@ -2,7 +2,8 @@ var sio = require('socket.io')
   , serial = require('serialport')
   , child = require('child_process')
   , moment = require('moment')
-  , fs = require('fs');
+  , fs = require('fs')
+    redis = require("redis");
 
 var express = require('express')
   , routes = require('./routes')
@@ -29,9 +30,27 @@ app.configure('development', function(){
 
 app.get('/', routes.index);
 
-http.createServer(app).listen(app.get('port'), function(){
+var server = http.createServer(app);
+var io = sio.listen(server);
+server.listen(app.get('port'), function(){
   console.log("Express server listening on port " + app.get('port'));
 });
+
+
+io.sockets.on('connection', function (socket) {
+  console.log('got a new socket');
+});
+
+if (process.env.SLAVE) {
+  var sub = redis.createClient();
+  sub.subscribe('servotemp');
+  sub.on('message', function(channel, data) {
+    if (channel == 'servotemp')
+      parseSerialData(data);
+  });
+} else {
+  var pub = redis.createClient();  
+}
 
 function connectToArduino(callback) {
   // Seems to work on a mac and on a Raspberry Pi
@@ -62,13 +81,19 @@ function connectToArduino(callback) {
 
 function parseSerialData(data) {
   // Ex: @085,  17.00,  20.50
-  var line, fd;
+  var line, fd, elms, ts, value = {};
+  data = data.replace('\\r', '').replace(/\"/g,''); // Hack to filter unescaped \r from Redis publications
   var match = data.match(/^@[0-9]{3},[-| ].{6},[-| ].{6}\!/g);
   if (match) {
-    line = moment().format() + "," + data.replace("@","").replace("!","") + "\n";
+    ts = moment().format();
+    line = ts + "," + data.replace("@","").replace("!","");
+    elms = line.split(",");
+    value = {timestamp: ts, angle: elms[0], amb: elms[1], obj: elms[2]};
     fd = fs.openSync(path.join(process.cwd(), 'public','temperatures.csv'), 'a');
-    fs.writeSync(fd, line);
+    fs.writeSync(fd, line + "\n");
     fs.closeSync(fd);
+    console.log("csv:", line);
+    io.sockets.emit('data', value);
   }
 }
 
@@ -76,6 +101,12 @@ connectToArduino(function(err, serialPort) {
   if (err) {
     console.log(err);
   } else {
-    serialPort.on('data', parseSerialData);
+    serialPort.on('data', function(data) {
+      parseSerialData(data);
+      if ('undefined' != typeof(pub)) {
+        pub.publish('servotemp', JSON.stringify(data));
+        console.log("redis:", data);
+      }
+    });
   }
 });

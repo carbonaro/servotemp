@@ -3,3 +3,18 @@ extends layout
 block content
   h1= title
   p Welcome to #{title}
+  #amb
+    .gauge
+    | (pièce)
+  #obj
+    .gauge
+    | (mur)
+  p#log
+  script(type='text/javascript')
+    var socket = io.connect("http://#{host}:#{port}");
+    socket.on('data', function (data) {
+        $("#log").html("Last updated at: " + data.timestamp);
+        $("#amb .gauge").html(data.amb + " °C");
+        $("#obj .gauge").html(data.obj + " °C");
+    });
+    

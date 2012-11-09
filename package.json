@@ -12,7 +12,8 @@
     "socket.io": "*",
     "express": "*",
     "jade": "*",
-    "moment": "*"
+    "moment": "*",
+    "redis": "*"
   },
   "engines": {
     "node": ">=0.6 <0.8"
