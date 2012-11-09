@@ -11,6 +11,7 @@
     "serialport": "1.0.6",
     "socket.io": "*",
     "express": "*",
+    "jade": "*",
     "moment": "*"
   },
   "engines": {
