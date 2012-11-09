@@ -17,4 +17,95 @@ block content
         $("#amb .gauge").html(data.amb + " °C");
         $("#obj .gauge").html(data.obj + " °C");
     });
+
+    var margin = {top: 20, right: 80, bottom: 30, left: 50},
+        width = 960 - margin.left - margin.right,
+        height = 500 - margin.top - margin.bottom;
+
+    // 2012-11-09T19:29:11+01:00
+    var parseDate = d3.time.format("%Y-%m-%dT%X").parse;
+
+    var x = d3.time.scale()
+        .range([0, width]);
+
+    var y = d3.scale.linear()
+        .range([height, 0]);
+
+    var color = d3.scale.category10();
+
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .orient("bottom");
+
+    var yAxis = d3.svg.axis()
+        .scale(y)
+        .orient("left");
+
+    var line = d3.svg.line()
+             .interpolate("basis")
+             .x(function(d) { return x(d.date); })
+             .y(function(d) { return y(d.temperature); });
+
+    var svg = d3.select("body").append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    d3.csv("temperatures.csv", function(rows) {
+      //color.domain(d3.keys(data[0]).filter(function(key) { return key !== "date"; }));
+      color.domain(d3.keys(rows[0]).filter(function(key) { 
+          if (key != "date" && key != "angle")
+            return key; 
+      }));
+      rows.forEach(function(r) {
+        r.object = parseFloat(r.object);
+        r.ambiant = parseFloat(r.ambiant);
+        r.date = new Date(r.date);
+      });
+      var locations = color.domain().map(function(name) {
+         return {
+           name: name,
+           values: rows.map(function(d) {
+             return {date: d.date, temperature: +d[name]};
+           })
+         };
+       });
+       x.domain(d3.extent(rows, function(d) { return d.date; }));
+       y.domain([
+           d3.min(locations, function(c) { return d3.min(c.values, function(v) { return v.temperature; }); }),
+           d3.max(locations, function(c) { return d3.max(c.values, function(v) { return v.temperature; }); })
+         ]);
+       svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
+
+       svg.append("g")
+            .attr("class", "y axis")
+            .call(yAxis)
+          .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("dy", ".71em")
+            .style("text-anchor", "end")
+            .text("Temperature (ºC)");
+       var location = svg.selectAll(".location")
+           .data(locations)
+         .enter().append("g")
+           .attr("class", "location");
+
+       location.append("path")
+           .attr("class", "line")
+           .attr("d", function(d) { return line(d.values); })
+           .style("stroke", function(d) { return color(d.name); });
+
+       location.append("text")
+           .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
+           .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.temperature) + ")"; })
+           .attr("x", 3)
+           .attr("dy", ".35em")
+           .text(function(d) { return d.name; });
+    });
+
     
