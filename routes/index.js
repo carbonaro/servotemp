@@ -9,12 +9,13 @@ exports.index = function(req, res){
 
 function getHostAddress() {
   var ifaces=os.networkInterfaces();
-  var eth0_address = '127.0.0.1';
-  if ('undefined' != typeof(ifaces.eth0)) {
-    ifaces.eth0.forEach(function(details) {
+  var address = '127.0.0.1';
+  var iface= process.env.IFACE || 'eth0';
+  if ('undefined' != typeof(ifaces[iface])) {
+    ifaces[iface].forEach(function(details) {
       if (details.family=='IPv4')
-        eth0_address = details.address;
+        address = details.address;
     });
   }
-  return eth0_address;
+  return address;
 }
