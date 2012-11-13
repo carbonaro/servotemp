@@ -43,13 +43,13 @@ block content
 
     var line = d3.svg.line()
              .interpolate("basis")
-             .x(function(d) { return x(d.date); })
-             .y(function(d) { return y(d.temperature); });
+             .x(function(d) { return ('undefined' != typeof(d)) ? x(d.date) : null; })
+             .y(function(d) { return ('undefined' != typeof(d)) ? y(d.temperature) : null; });
 
     var svg = d3.select("body").append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
-      .append("g")
+        .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
     d3.csv("temperatures.csv", function(rows) {
@@ -66,17 +66,12 @@ block content
       var locations = color.domain().map(function(angle) {
          return {
            name: targets[angle],
-           values: rows.map(function(d) {
-             if (d.angle == angle)
-                return {date: d.date, temperature: +d[name]};
-           })
-         };
-       });
+           values: rows.filter(function(d) { return (d.angle == angle) })
+                       .map(function(d) { return {date: d.date, temperature: d.object}; })
+           };
+          });
        x.domain(d3.extent(rows, function(d) { return d.date; }));
-       y.domain([
-           d3.min(locations, function(c) { return d3.min(c.values, function(v) { return v.temperature; }); }),
-           d3.max(locations, function(c) { return d3.max(c.values, function(v) { return v.temperature; }); })
-         ]);
+       y.domain([-40,120]);
        svg.append("g")
             .attr("class", "x axis")
             .attr("transform", "translate(0," + height + ")")
@@ -95,10 +90,9 @@ block content
            .data(locations)
            .enter().append("g")
            .attr("class", "location");
-
        location.append("path")
            .attr("class", "line")
-           .attr("d", function(d) { return line(d.values); })
+           .attr("d", function(d) { return line(d.values) })
            .style("stroke", function(d) { return color(d.name); });
 
        location.append("text")
