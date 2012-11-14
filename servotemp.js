@@ -12,46 +12,6 @@ var express = require('express')
 
 var app = express();
 
-app.configure(function(){
-  app.set('port', process.env.PORT || 8088);
-  app.set('views', __dirname + '/views');
-  app.set('view engine', 'jade');
-  app.use(express.favicon());
-  app.use(express.logger('dev'));
-  app.use(express.bodyParser());
-  app.use(express.methodOverride());
-  app.use(app.router);
-  app.use(express.static(path.join(__dirname, 'public')));
-});
-
-app.configure('development', function(){
-  app.use(express.errorHandler());
-});
-
-app.get('/', routes.index);
-
-var server = http.createServer(app);
-var io = sio.listen(server);
-server.listen(app.get('port'), function(){
-  console.log("Express server listening on port " + app.get('port'));
-});
-
-
-io.sockets.on('connection', function (socket) {
-  console.log('got a new socket');
-});
-
-if (process.env.SLAVE) {
-  var sub = redis.createClient();
-  sub.subscribe('servotemp');
-  sub.on('message', function(channel, data) {
-    if (channel == 'servotemp')
-      parseSerialData(data);
-  });
-} else {
-  var pub = redis.createClient();  
-}
-
 function connectToArduino(callback) {
   // Seems to work on a mac and on a Raspberry Pi
   child.exec('ls /dev | grep -E "tty\.usb|ttyACM0"', function(err, stdout, stderr){
@@ -93,20 +53,68 @@ function parseSerialData(data) {
     fs.writeSync(fd, line + "\n");
     fs.closeSync(fd);
     console.log("csv:", line);
+    db.zadd('servotemp:measures', new Date(ts).getTime(), JSON.stringify(value), function(err, res) {
+      if (err)
+        console.log('error saving to Redis');
+      else
+        console.log("redis: stored measure");
+    });
     io.sockets.emit('data', value);
   }
 }
 
-connectToArduino(function(err, serialPort) {
-  if (err) {
-    console.log(err);
-  } else {
-    serialPort.on('data', function(data) {
+app.configure(function(){
+  app.set('port', process.env.PORT || 8088);
+  app.set('views', __dirname + '/views');
+  app.set('view engine', 'jade');
+  app.use(express.favicon());
+  app.use(express.logger('dev'));
+  app.use(express.bodyParser());
+  app.use(express.methodOverride());
+  app.use(app.router);
+  app.use(express.static(path.join(__dirname, 'public')));
+});
+
+app.configure('development', function(){
+  app.use(express.errorHandler());
+});
+
+if (process.env.SLAVE) {
+  var sub = redis.createClient();
+  sub.subscribe('servotemp');
+  sub.on('message', function(channel, data) {
+    if (channel == 'servotemp')
       parseSerialData(data);
-      if ('undefined' != typeof(pub)) {
-        pub.publish('servotemp', JSON.stringify(data));
-        console.log("redis:", data);
-      }
-    });
-  }
+  });
+} else {
+  var pub = redis.createClient();
+  connectToArduino(function(err, serialPort) {
+    if (err) {
+      console.log(err);
+    } else {
+      serialPort.on('data', function(data) {
+        parseSerialData(data);
+        if ('undefined' != typeof(pub)) {
+          pub.publish('servotemp', JSON.stringify(data));
+          console.log("redis pub:", data);
+        }
+      });
+    }
+  });
+}
+
+var db = global.db = redis.createClient();
+
+app.get('/', routes.index);
+app.get('/bydate', routes.getByDate);
+
+var server = http.createServer(app);
+var io = sio.listen(server);
+server.listen(app.get('port'), function(){
+  console.log("Express server listening on port " + app.get('port'));
+});
+
+
+io.sockets.on('connection', function (socket) {
+  console.log('got a new socket');
 });
