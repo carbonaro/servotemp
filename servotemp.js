@@ -48,7 +48,7 @@ function parseSerialData(data) {
     ts = moment().format();
     line = ts + "," + data.replace("@","").replace("!","");
     elms = line.split(",");
-    value = {timestamp: ts, angle: elms[0], amb: elms[1], obj: elms[2]};
+    value = {timestamp: ts, angle: elms[1], amb: elms[2], obj: elms[3]};
     fd = fs.openSync(path.join(process.cwd(), 'public','temperatures.csv'), 'a');
     fs.writeSync(fd, line + "\n");
     fs.closeSync(fd);
