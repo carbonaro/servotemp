@@ -3,11 +3,12 @@
 
 #define T_AMB 0x06
 #define T_OBJ 0x07
-#define WAIT_TIME 5 // number of minutes between each measure
-#define N_SAMPLES 5 // number of samples to average between to measures
+#define WAIT_TIME 1 // number of seconds between each measure
+#define N_SAMPLES 1 // number of samples to average between to measures
 #define DEBUG false
-#define N_STOPS 3
-int stop_positions[N_STOPS] = {0, 85, 169}; // Angles at which the servo will stop to measure the temperature
+#define TEST false
+#define N_STOPS 1
+int stop_positions[N_STOPS] = {0, 85, 169};
 
 float temp_amb[N_SAMPLES];
 float temp_obj[N_SAMPLES];
@@ -35,9 +36,9 @@ void send_results(int angle, float amb, float obj) {
     // Ex: $090-010.15+030.42\r
     char buffer[22];
     sprintf(buffer, "@%03d,", angle);
-    strncpy(buffer+5, float2s(amb), 7);
+    strncpy(buffer+5, float2s(amb-273.15), 7);
     strncpy(buffer+12, ",", 1);
-    strncpy(buffer+13, float2s(obj), 7);
+    strncpy(buffer+13, float2s(obj-273.15), 7);
     buffer[20] = '!';
     buffer[21] = '\0';
     Serial.println(buffer);
@@ -67,7 +68,7 @@ double readTemperature(char command) {
     int data_high = 0;
     int pec = 0;
 
-    if (DEBUG)
+    if (TEST)
         return (random(-40,120));
 
     i2c_start_wait(dev+I2C_WRITE);
@@ -98,11 +99,11 @@ void setup(){
     PORTC = (1 << PORTC4) | (1 << PORTC5);//enable pullups
 
     myservo.attach(9);
-    Serial.println('Still here');
 }
 
 void loop(){
     int current_pos = 0;
+    int wait_time = round(((float)WAIT_TIME*1000.0/(float)N_SAMPLES));
     for (int i = 0 ; i < N_STOPS ; i++) {
         current_pos = stop_positions[i];
         myservo.write(current_pos);
@@ -112,7 +113,12 @@ void loop(){
         for (int j = 0 ; j < N_SAMPLES ; j++) {
             temp_amb[j] = readTemperature(T_AMB);
             temp_obj[j] = readTemperature(T_OBJ);
-            delay(round(WAIT_TIME/N_SAMPLES)*60000);
+            if (DEBUG) {
+              Serial.print("Waiting for ");
+              Serial.print(wait_time/1000);
+              Serial.println(" second(s)");
+            }
+            delay(wait_time);
         }
         send_results(current_pos, average(temp_amb), average(temp_obj));
     }
