@@ -14,8 +14,8 @@ block content
     var socket = io.connect("http://#{host}:#{port}");
     socket.on('data', function (data) {
         $("#log").html("Last updated at: " + data.timestamp);
-        $("#amb .gauge").html(data.amb + " °C");
-        $("#obj .gauge").html(data.obj + " °C");
+        $("#amb .gauge").html(data.ambiant + " °C");
+        $("#obj .gauge").html(data.object + " °C");
     });
 
     var margin = {top: 20, right: 80, bottom: 30, left: 50},
@@ -42,9 +42,9 @@ block content
         .orient("left");
 
     var line = d3.svg.line()
-             .interpolate("basis")
-             .x(function(d) { return ('undefined' != typeof(d)) ? x(d.date) : null; })
-             .y(function(d) { return ('undefined' != typeof(d)) ? y(d.temperature) : null; });
+        .interpolate("basis")
+        .x(function(d) { return ('undefined' != typeof(d)) ? x(d.date) : null; })
+        .y(function(d) { return ('undefined' != typeof(d)) ? y(d.temperature) : null; });
 
     var svg = d3.select("body").append("svg")
         .attr("width", width + margin.left + margin.right)
@@ -52,55 +52,57 @@ block content
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    d3.csv("temperatures.csv", function(rows) {
-      //color.domain(d3.keys(data[0]).filter(function(key) { return key !== "date"; }));
-      var targets = {'000': 'Sol', '085': 'Fenêtre', '169': 'Plafond'};
-      color.domain(['000', '085', '169']);
+    d3.json('/measures', function(rows) {
+        var targets = {'000': 'Sol', '085': 'Fenêtre', '169': 'Plafond'};
+        color.domain(['000', '085', '169']);
 
-      rows.forEach(function(r) {
-        r.object = parseFloat(r.object);
-        r.ambiant = parseFloat(r.ambiant);
-        r.date = new Date(r.date);
-        r.target = targets[r.angle];
-      });
-      var locations = color.domain().map(function(angle) {
-         return {
-           name: targets[angle],
-           values: rows.filter(function(d) { return (d.angle == angle) })
-                       .map(function(d) { return {date: d.date, temperature: d.object}; })
-           };
-          });
-       x.domain(d3.extent(rows, function(d) { return d.date; }));
-       y.domain([-40,120]);
-       svg.append("g")
-            .attr("class", "x axis")
-            .attr("transform", "translate(0," + height + ")")
-            .call(xAxis);
+        rows.forEach(function(r) {
+            r.object = parseFloat(r.object);
+            r.ambiant = parseFloat(r.ambiant);
+            r.date = new Date(r.date);
+            r.target = targets[r.angle];
+        });
 
-       svg.append("g")
-            .attr("class", "y axis")
-            .call(yAxis)
-          .append("text")
-            .attr("transform", "rotate(-90)")
-            .attr("y", 6)
-            .attr("dy", ".71em")
-            .style("text-anchor", "end")
-            .text("Temperature (ºC)");
-       var location = svg.selectAll(".location")
-           .data(locations)
-           .enter().append("g")
-           .attr("class", "location");
-       location.append("path")
-           .attr("class", "line")
-           .attr("d", function(d) { return line(d.values) })
-           .style("stroke", function(d) { return color(d.name); });
+        var locations = color.domain().map(function(angle) {
+            return {
+                name: targets[angle],
+                values: rows.filter(function(d) { return (d.angle == angle) })
+                            .map(function(d) { return {date: d.date, temperature: d.object}; })
+            };
+        });
 
-       location.append("text")
-           .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
-           .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.temperature) + ")"; })
-           .attr("x", 3)
-           .attr("dy", ".35em")
-           .text(function(d) { return d.name; });
+        x.domain(d3.extent(rows, function(d) { return d.date; }));
+        y.domain([-40,120]);
+        svg.append("g")
+           .attr("class", "x axis")
+           .attr("transform", "translate(0," + height + ")")
+           .call(xAxis);
+
+        svg.append("g")
+           .attr("class", "y axis")
+           .call(yAxis)
+           .append("text")
+           .attr("transform", "rotate(-90)")
+           .attr("y", 6)
+           .attr("dy", ".71em")
+           .style("text-anchor", "end")
+           .text("Temperature (ºC)");
+
+        var location = svg.selectAll(".location")
+                .data(locations)
+                .enter().append("g")
+                .attr("class", "location");
+
+        location.append("path")
+                .attr("class", "line")
+                .attr("d", function(d) { return line(d.values) })
+                .style("stroke", function(d) { return color(d.name); });
+
+        location.append("text")
+                .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
+                .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.temperature) + ")"; })
+               .attr("x", 3)
+               .attr("dy", ".35em")
+               .text(function(d) { return d.name; });
     });
-
     

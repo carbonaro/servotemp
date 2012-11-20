@@ -48,7 +48,7 @@ function parseSerialData(data) {
     ts = moment().format();
     line = ts + "," + data.replace("@","").replace("!","");
     elms = line.split(",");
-    value = {timestamp: ts, angle: elms[1], amb: elms[2], obj: elms[3]};
+    value = {date: ts, angle: elms[1], ambiant: elms[2], object: elms[3]};
     fd = fs.openSync(path.join(process.cwd(), 'public','temperatures.csv'), 'a');
     fs.writeSync(fd, line + "\n");
     fs.closeSync(fd);
@@ -106,7 +106,7 @@ if (process.env.SLAVE) {
 var db = global.db = redis.createClient();
 
 app.get('/', routes.index);
-app.get('/bydate', routes.getByDate);
+app.get('/measures', routes.getByDate);
 
 var server = http.createServer(app);
 var io = sio.listen(server);
