@@ -29,7 +29,7 @@ exports.getByDate = function(req, res) {
 function getHostAddress() {
   var ifaces = os.networkInterfaces();
   var address = '127.0.0.1';
-  var iface= process.env.IFACE || 'eth0';
+  var iface= process.env.IFACE || 'wlan0';
   if ('undefined' != typeof(ifaces[iface])) {
     ifaces[iface].forEach(function(details) {
       if (details.family=='IPv4')

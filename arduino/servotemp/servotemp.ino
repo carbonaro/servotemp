@@ -3,12 +3,12 @@
 
 #define T_AMB 0x06
 #define T_OBJ 0x07
-#define WAIT_TIME 180 // number of seconds between each measure
+#define WAIT_TIME 30 // number of seconds between each measure
 #define N_SAMPLES 3 // number of samples to average between two measures
 #define DEBUG false
 #define TEST false
 #define N_STOPS 3
-int stop_positions[N_STOPS] = {0, 85, 169};
+int stop_positions[N_STOPS] = {0, 70, 150};
 
 float temp_amb[N_SAMPLES];
 float temp_obj[N_SAMPLES];
