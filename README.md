@@ -10,6 +10,12 @@ the fix was simple on my end, cd into the node_modules/serialport and issue a qu
 and a nice solid node-gyp build. Keep in mind you'll need a basic toolchain (etc), 
 which can be provided with build-essential (at least).
 
+# Schematics
+
+Hooking the MLX90614 sensor to the Arduino
+
+![MLX90614 hookup](/images/MLX90614_hookup.png)
+
 # Credits
 
 Thanks to Bildr.org! http://bildr.org/2011/02/mlx90614-arduino/
