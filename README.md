@@ -14,7 +14,7 @@ which can be provided with build-essential (at least).
 
 Hooking the MLX90614 sensor to the Arduino
 
-![MLX90614 hookup](/images/MLX90614_hookup.png)
+![MLX90614 hookup](https://raw.github.com/carbonaro/servotemp/master/images/MLX90614_hookup.png)
 
 # Credits
 
