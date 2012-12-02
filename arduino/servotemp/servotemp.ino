@@ -3,7 +3,7 @@
 
 #define T_AMB 0x06
 #define T_OBJ 0x07
-#define WAIT_TIME 30 // number of seconds between each measure
+#define WAIT_TIME 15 // number of seconds between each measure
 #define N_SAMPLES 3 // number of samples to average between two measures
 #define DEBUG false
 #define TEST false
@@ -16,8 +16,9 @@ float temp_obj[N_SAMPLES];
 Servo myservo;  // create servo object to control a servo 
                 // a maximum of eight servo objects can be created 
 
-int pos = 0;    // variable to store the servo position 
-
+int current_pos = 0;  // variable to store the servo position 
+int old_pos = 0;
+tr
 char *float2s(float f, unsigned int digits=2) {
   static char buf[10];
   return dtostrf(f, 7, digits, buf);
@@ -91,6 +92,22 @@ double readTemperature(char command) {
     return (tempData);
 }
 
+void transitionServoPosition(int from, int to) {
+  Serial.println(from);
+  Serial.println(to);
+  if (from >= to) {
+    for (int i = from ; i >= to ; i--) {
+      myservo.write(i);
+      delay(20);
+    }
+  } else {
+    for (int i = from ; i <= to ; i++) {
+      myservo.write(i);
+      delay(20);
+    }
+  }
+}
+
 void setup(){
     Serial.begin(9600);
     Serial.println("servotemp starting...");
@@ -102,12 +119,11 @@ void setup(){
 }
 
 void loop(){
-    int current_pos = 0;
     int wait_time = round(((float)WAIT_TIME*1000.0/(float)N_SAMPLES));
     for (int i = 0 ; i < N_STOPS ; i++) {
+        old_pos = current_pos;
         current_pos = stop_positions[i];
-        myservo.write(current_pos);
-        delay(1000); // wait for 1 second to give the servo enough time to move to its position
+        transitionServoPosition(old_pos, current_pos); 
         reset_measures(temp_amb);
         reset_measures(temp_obj);
         for (int j = 0 ; j < N_SAMPLES ; j++) {

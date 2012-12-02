@@ -12,7 +12,7 @@ block content
         if (last_update)
             $("#log").html("Latest update: " + moment.duration(new Date()-last_update).seconds() + "s ago");
     }
-    setInterval(updateTime, 1000);
+    setInterval(updateTime, 500);
     socket.on('data', function (data) {
         d3.selectAll('g.location path').style('stroke-width', "1.5");
         d3.selectAll('g.angle-' + data.angle + ' path').style('stroke-width', "3.5")
