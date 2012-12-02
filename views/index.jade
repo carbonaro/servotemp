@@ -1,23 +1,25 @@
 extends layout
 
 block content
-  h1= title
-  p Welcome to #{title}
-  #amb
-    .gauge
-    | (pièce)
+  h2= title
   #obj
     .gauge
-    | (mur)
   p#log
   script(type='text/javascript')
     var socket = io.connect("http://#{host}:#{port}");
+    var last_update = null;
+    function updateTime() {
+        if (last_update)
+            $("#log").html("Latest update: " + moment.duration(new Date()-last_update).seconds() + "s ago");
+    }
+    setInterval(updateTime, 1000);
     socket.on('data', function (data) {
-        $("#log").html("Last updated at: " + data.timestamp);
-        $("#amb .gauge").html(data.ambiant + " °C");
+        d3.selectAll('g.location path').style('stroke-width', "1.5");
+        d3.selectAll('g.angle-' + data.angle + ' path').style('stroke-width', "3.5")
+        last_update = new Date();
         $("#obj .gauge").html(data.object + " °C");
     });
-
+  
     var margin = {top: 20, right: 80, bottom: 30, left: 50},
         width = 960 - margin.left - margin.right,
         height = 500 - margin.top - margin.bottom;
@@ -54,6 +56,7 @@ block content
 
     d3.json('/measures', function(rows) {
         var colorDomain = [];
+        var labels = {'000': 'Sol', '070': 'Fenêtre', '150': 'Plafond'};
         rows.forEach(function(r) {
             r.object = parseFloat(r.object);
             r.ambiant = parseFloat(r.ambiant);
@@ -63,7 +66,6 @@ block content
         });
         color.domain(colorDomain);
         var locations = color.domain().map(function(angle) {
-            console.log(angle);
             return {
                 name: angle,
                 values: rows.filter(function(d) { return (d.angle == angle) })
@@ -72,7 +74,7 @@ block content
         });
 
         x.domain(d3.extent(rows, function(d) { return d.date; }));
-        y.domain([-40,120]);
+        y.domain([10,25]);
         svg.append("g")
            .attr("class", "x axis")
            .attr("transform", "translate(0," + height + ")")
@@ -91,7 +93,7 @@ block content
         var location = svg.selectAll(".location")
                 .data(locations)
                 .enter().append("g")
-                .attr("class", "location");
+                .attr("class", function(d) { return "location angle-" + d.name });
 
         location.append("path")
                 .attr("class", "line")
@@ -99,10 +101,15 @@ block content
                 .style("stroke", function(d) { return color(d.name); });
 
         location.append("text")
-                .datum(function(d) { return {name: d.name, value: d.values[d.values.length - 1]}; })
+                .datum(function(d) {return {name: d.name, value: d.values[0]}; })
                 .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.temperature) + ")"; })
-               .attr("x", 3)
-               .attr("dy", ".35em")
-               .text(function(d) { return d.name; });
+                .attr("x", 3)
+                .attr("dy", ".35em")
+                .text(function(d) {
+                    if ('undefined' != typeof(labels[d.name]))
+                        return labels[d.name];
+                    else
+                        return d.name; 
+                });
     });
     
