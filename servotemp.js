@@ -12,6 +12,13 @@ var express = require('express')
 
 var app = express();
 
+var appConfig = null;
+try {
+  appConfig = require('./config.json');
+} catch (e) {
+  console.log("Could not open config.json");
+}
+
 function connectToArduino(callback) {
   // Seems to work on a mac and on a Raspberry Pi
   child.exec('ls /dev | grep -E "tty\.usb|ttyACM0"', function(err, stdout, stderr){
@@ -69,6 +76,8 @@ app.configure(function(){
   app.set('view engine', 'jade');
   app.use(express.favicon());
   app.use(express.logger('dev'));
+  if (appConfig)
+    app.use(express.basicAuth(appConfig.username, appConfig.password));
   app.use(express.bodyParser());
   app.use(express.methodOverride());
   app.use(app.router);
