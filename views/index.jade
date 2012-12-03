@@ -6,7 +6,7 @@ block content
     .gauge
   p#log
   script(type='text/javascript')
-    var uri = window.document.host;
+    var uri = window.location.host;
     var socket = io.connect("http://" + uri);
     var last_update = null;
     function updateTime() {
