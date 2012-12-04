@@ -6,8 +6,9 @@ block content
     .gauge
     .select
       select#timeframe
-        option(selected="true", value="24") Dernières 24h
+        option(value="24") Dernières 24h
         option(value="1") Dernière Heure
+        option(selected="true", value="3") 3 Dernières heures
         option(value="48") Dernières 48h
         option(value="-inf") Tout
     .clearer
@@ -23,9 +24,9 @@ block content
     function updateTimeframe(tf) {
       var n = parseInt(tf);
       if (isNaN(n)) return '-inf';
-      return ((new Date()).getTime() - n*10000);
+      return (moment().subtract('hour', tf).valueOf());
     }
-    var min = updateTimeframe(24);
+    var min = updateTimeframe(3);
     setInterval(updateTime, 500);
     socket.on('data', function (data) {
         d3.selectAll('g.location path').style('stroke-width', "1.5");
