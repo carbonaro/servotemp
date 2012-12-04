@@ -4,6 +4,13 @@ block content
   h2= title
   #obj
     .gauge
+    .select
+      select#timeframe
+        option(selected="true", value="24") Dernières 24h
+        option(value="1") Dernière Heure
+        option(value="48") Dernières 48h
+        option(value="-inf") Tout
+    .clearer
   p#log
   script(type='text/javascript')
     var uri = window.location.host;
@@ -13,6 +20,12 @@ block content
         if (last_update)
             $("#log").html("Latest update: " + moment.duration(new Date()-last_update).seconds() + "s ago");
     }
+    function updateTimeframe(tf) {
+      var n = parseInt(tf);
+      if (isNaN(n)) return '-inf';
+      return ((new Date()).getTime() - n*10000);
+    }
+    var min = updateTimeframe(24);
     setInterval(updateTime, 500);
     socket.on('data', function (data) {
         d3.selectAll('g.location path').style('stroke-width', "1.5");
@@ -20,7 +33,13 @@ block content
         last_update = new Date();
         $("#obj .gauge").html(data.object + " °C");
     });
-  
+    $(document).ready(function() {
+      $('#timeframe').change(function() {
+        min = updateTimeframe($(this).attr('value'));
+        clearGraph();
+        generateGraph();
+      });
+    });
     var margin = {top: 20, right: 80, bottom: 30, left: 50},
         width = 960 - margin.left - margin.right,
         height = 500 - margin.top - margin.bottom;
@@ -49,79 +68,85 @@ block content
         .x(function(d) { return ('undefined' != typeof(d)) ? x(d.date) : null; })
         .y(function(d) { return ('undefined' != typeof(d)) ? y(d.temperature) : null; });
 
-    var svg = d3.select("body").append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    function clearGraph() {
+      d3.select("svg").remove();
+    }
 
-    svg.selectAll("line.y")
-      .data(y.ticks(10))
-      .enter().append("line")
-      .attr("class", "y")
-      .attr("x1", 0)
-      .attr("x2", width)
-      .attr("y1", y)
-      .attr("y2", y)
-      .style("stroke-width", "0.5px")
-      .style("stroke", "#ccc");
-      
-    d3.json('/measures', function(rows) {
-        var colorDomain = [];
-        var labels = {'000': 'Sol', '070': 'Fenêtre', '150': 'Plafond'};
-        rows.forEach(function(r) {
-            r.object = parseFloat(r.object);
-            r.ambiant = parseFloat(r.ambiant);
-            r.date = new Date(r.date);
-            r.angle = r.angle;
-            if (colorDomain.indexOf(r.angle) == -1) colorDomain.push(r.angle);
-        });
-        color.domain(colorDomain);
-        var locations = color.domain().map(function(angle) {
-            return {
-                name: angle,
-                values: rows.filter(function(d) { return (d.angle == angle) })
-                            .map(function(d) { return {date: d.date, temperature: d.object}; })
-            };
-        });
+    function generateGraph() {
+      var svg = d3.select("body").append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-        x.domain(d3.extent(rows, function(d) { return d.date; }));
-        y.domain([10,25]);
-        svg.append("g")
-           .attr("class", "x axis")
-           .attr("transform", "translate(0," + height + ")")
-           .call(xAxis);
+      svg.selectAll("line.y")
+        .data(y.ticks(10))
+        .enter().append("line")
+        .attr("class", "y")
+        .attr("x1", 0)
+        .attr("x2", width)
+        .attr("y1", y)
+        .attr("y2", y)
+        .style("stroke-width", "0.5px")
+        .style("stroke", "#ccc");
 
-        svg.append("g")
-           .attr("class", "y axis")
-           .call(yAxis)
-           .append("text")
-           .attr("transform", "rotate(-90)")
-           .attr("y", 6)
-           .attr("dy", ".71em")
-           .style("text-anchor", "end")
-           .text("Temperature (ºC)");
+      d3.json('/measures?min=' + min, function(rows) {
+          var colorDomain = [];
+          var labels = {'000': 'Sol', '070': 'Fenêtre', '150': 'Plafond'};
+          rows.forEach(function(r) {
+              r.object = parseFloat(r.object);
+              r.ambiant = parseFloat(r.ambiant);
+              r.date = new Date(r.date);
+              r.angle = r.angle;
+              if (colorDomain.indexOf(r.angle) == -1) colorDomain.push(r.angle);
+          });
+          color.domain(colorDomain);
+          var locations = color.domain().map(function(angle) {
+              return {
+                  name: angle,
+                  values: rows.filter(function(d) { return (d.angle == angle) })
+                              .map(function(d) { return {date: d.date, temperature: d.object}; })
+              };
+          });
 
-        var location = svg.selectAll(".location")
-                .data(locations)
-                .enter().append("g")
-                .attr("class", function(d) { return "location angle-" + d.name });
+          x.domain(d3.extent(rows, function(d) { return d.date; }));
+          y.domain([10,25]);
+          svg.append("g")
+             .attr("class", "x axis")
+             .attr("transform", "translate(0," + height + ")")
+             .call(xAxis);
 
-        location.append("path")
-                .attr("class", "line")
-                .attr("d", function(d) { return line(d.values) })
-                .style("stroke", function(d) { return color(d.name); });
+          svg.append("g")
+             .attr("class", "y axis")
+             .call(yAxis)
+             .append("text")
+             .attr("transform", "rotate(-90)")
+             .attr("y", 6)
+             .attr("dy", ".71em")
+             .style("text-anchor", "end")
+             .text("Temperature (ºC)");
 
-        location.append("text")
-                .datum(function(d) {return {name: d.name, value: d.values[0]}; })
-                .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.temperature) + ")"; })
-                .attr("x", 3)
-                .attr("dy", ".35em")
-                .text(function(d) {
-                    if ('undefined' != typeof(labels[d.name]))
-                        return labels[d.name];
-                    else
-                        return d.name; 
-                });
-    });
-    
+          var location = svg.selectAll(".location")
+                  .data(locations)
+                  .enter().append("g")
+                  .attr("class", function(d) { return "location angle-" + d.name });
+
+          location.append("path")
+                  .attr("class", "line")
+                  .attr("d", function(d) { return line(d.values) })
+                  .style("stroke", function(d) { return color(d.name); });
+
+          location.append("text")
+                  .datum(function(d) {return {name: d.name, value: d.values[0]}; })
+                  .attr("transform", function(d) { return "translate(" + x(d.value.date) + "," + y(d.value.temperature) + ")"; })
+                  .attr("x", 3)
+                  .attr("dy", ".35em")
+                  .text(function(d) {
+                      if ('undefined' != typeof(labels[d.name]))
+                          return labels[d.name];
+                      else
+                          return d.name;
+                  });
+      });
+    }
+    generateGraph();
