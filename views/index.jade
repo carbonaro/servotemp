@@ -24,7 +24,7 @@ block content
     function updateTimeframe(tf) {
       var n = parseInt(tf);
       if (isNaN(n)) return '-inf';
-      return (moment().subtract('hour', tf).valueOf());
+      return (moment().subtract('hours', tf).valueOf());
     }
     var min = updateTimeframe(3);
     setInterval(updateTime, 500);
