@@ -12,7 +12,7 @@ exports.getByDate = function(req, res) {
   var min = req.param('min') || "-inf";
   var max = req.param('max') || "+inf";
   var data = [];
-  db.zrevrangebyscore('servotemp:measures', max, min, function(err, results) {
+  db.zrangebyscore('servotemp:measures', min, max, function(err, results) {
     data = results.map(function(e,i) {
       try {
         return JSON.parse(e);
